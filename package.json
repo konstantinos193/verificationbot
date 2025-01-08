@@ -1,0 +1,16 @@
+{
+  "name": "ape-elite-club-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "dotenv": "^16.4.7",
+    "axios": "^1.7.9",
+    "quickchart-js": "^3.1.3",
+    "date-fns": "^2.30.0"
+  }
+}

@@ -1,0 +1,54 @@
+{
+    "abi": [
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "staker",
+                    "type": "address"
+                }
+            ],
+            "name": "getStakerInfo",
+            "outputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "uint256[]",
+                            "name": "stakedTokens",
+                            "type": "uint256[]"
+                        },
+                        {
+                            "internalType": "bool",
+                            "name": "isMinter",
+                            "type": "bool"
+                        }
+                    ],
+                    "internalType": "struct Staking.StakerInfo",
+                    "name": "",
+                    "type": "tuple"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "user",
+                    "type": "address"
+                }
+            ],
+            "name": "getUserTier",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ]
+} 
