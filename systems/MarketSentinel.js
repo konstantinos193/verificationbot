@@ -18,7 +18,6 @@ class MarketSentinel {
             }
         };
 
-        // Store last state to compare changes
         this.lastState = {
             btcPrice: null,
             ethPrice: null,
@@ -26,22 +25,19 @@ class MarketSentinel {
             strength: 0
         };
 
-        // Thresholds for significant changes
         this.THRESHOLDS = {
-            PRICE_CHANGE: 2.0,     // 2% price change
-            STRENGTH_CHANGE: 2,     // 2 point sentiment strength change
-            WALL_MIN: 100,         // Minimum wall size in BTC to report
-            PREMIUM_THRESHOLD: 0.5  // 0.5% futures premium threshold
+            PRICE_CHANGE: 2.0,
+            STRENGTH_CHANGE: 2,
+            WALL_MIN: 100,
+            PREMIUM_THRESHOLD: 0.5
         };
 
-        // API Keys
         this.CMC_API_KEY = process.env.CMC_API_KEY;
         if (!this.CMC_API_KEY) {
             console.error('CMC_API_KEY not found in environment variables');
             throw new Error('CMC_API_KEY is required');
         }
 
-        // Configure axios defaults for CMC
         this.cmcAxios = axios.create({
             baseURL: this.ENDPOINTS.CMC,
             headers: {
@@ -51,11 +47,9 @@ class MarketSentinel {
             }
         });
 
-        // Rate limiting
         this.lastRequestTime = 0;
-        this.REQUEST_DELAY = 6000; // 6 seconds between requests
+        this.REQUEST_DELAY = 6000;
 
-        // Start the sentinel
         this.startSentinel();
     }
 
@@ -65,19 +59,13 @@ class MarketSentinel {
 
     async startSentinel() {
         console.log('Starting market sentiment monitoring...');
-        
-        // Initial analysis
         await this.performSentimentAnalysis();
-        
-        // Set up periodic analysis
         setInterval(() => this.performSentimentAnalysis(), this.UPDATE_INTERVAL);
     }
 
     async performSentimentAnalysis() {
         try {
             console.log('Analyzing market sentiment...');
-
-            // Fetch market data
             const [btcPrice, ethPrice, orderBook, futures, liquidations, openInterest] = await Promise.all([
                 this.getBTCPrice(),
                 this.getETHPrice(),
@@ -92,7 +80,6 @@ class MarketSentinel {
                 return;
             }
 
-            // Analyze market structure
             const marketStructure = this.analyzeMarketStructure({
                 btcPrice,
                 ethPrice,
@@ -102,9 +89,7 @@ class MarketSentinel {
                 openInterest
             });
 
-            // Check if changes are significant enough to post
             if (this.shouldPostUpdate(btcPrice, ethPrice, marketStructure)) {
-                // Generate and send report
                 await this.sendSentimentReport({
                     btcPrice,
                     ethPrice,
@@ -113,7 +98,6 @@ class MarketSentinel {
                     openInterest
                 });
 
-                // Update last state
                 this.lastState = {
                     btcPrice,
                     ethPrice,
@@ -128,13 +112,10 @@ class MarketSentinel {
     }
 
     shouldPostUpdate(btcPrice, ethPrice, marketStructure) {
-        if (!this.lastState.btcPrice) return true; // First run
+        if (!this.lastState.btcPrice) return true;
 
-        // Check for significant price changes
         const btcPriceChange = Math.abs(btcPrice.usd_24h_change - this.lastState.btcPrice.usd_24h_change);
         const ethPriceChange = Math.abs(ethPrice.usd_24h_change - this.lastState.ethPrice.usd_24h_change);
-        
-        // Check for sentiment strength changes
         const strengthChange = Math.abs(marketStructure.strength - this.lastState.strength);
 
         return (
@@ -147,7 +128,6 @@ class MarketSentinel {
 
     async getBTCPrice() {
         try {
-            // Try CoinGecko first
             const cgResponse = await axios.get(this.ENDPOINTS.COINGECKO.BTC);
             if (cgResponse.data?.bitcoin) {
                 return {
@@ -159,7 +139,6 @@ class MarketSentinel {
             console.error('Error fetching BTC price from CoinGecko:', error.message);
         }
 
-        // Fallback to CMC
         try {
             const response = await this.cmcAxios.get('/cryptocurrency/quotes/latest', {
                 params: {
@@ -186,7 +165,6 @@ class MarketSentinel {
 
     async getETHPrice() {
         try {
-            // Try CoinGecko first
             const cgResponse = await axios.get(this.ENDPOINTS.COINGECKO.ETH);
             if (cgResponse.data?.ethereum) {
                 return {
@@ -198,7 +176,6 @@ class MarketSentinel {
             console.error('Error fetching ETH price from CoinGecko:', error.message);
         }
 
-        // Fallback to CMC
         try {
             const response = await this.cmcAxios.get('/cryptocurrency/quotes/latest', {
                 params: {
@@ -254,7 +231,7 @@ class MarketSentinel {
         try {
             const response = await axios.get(`${this.ENDPOINTS.BITMEX}/liquidation`, {
                 params: {
-                    symbol: 'XBTUSD',  // BTC-USD perpetual
+                    symbol: 'XBTUSD',
                     count: 100,
                     reverse: true
                 }
@@ -262,7 +239,7 @@ class MarketSentinel {
 
             const liquidations = response.data.map(liq => ({
                 side: liq.side.toLowerCase(),
-                volume: liq.leavesQty / 100000000, // Convert satoshis to BTC
+                volume: liq.leavesQty / 100000000,
                 price: liq.price
             }));
 
@@ -294,7 +271,6 @@ class MarketSentinel {
         let signals = [];
         let strength = 0;
 
-        // Analyze order book imbalances
         const buyWall = this.findLargestWalls(data.orderBook.bids);
         const sellWall = this.findLargestWalls(data.orderBook.asks);
         
@@ -306,7 +282,6 @@ class MarketSentinel {
             signals.push(`🔴 Strong sell wall at $${sellWall.price} (${this.formatNumber(sellWall.size)} BTC)`);
         }
 
-        // Analyze liquidations
         const longLiqs = data.liquidations.filter(l => l.side === 'long').reduce((acc, l) => acc + l.volume, 0);
         const shortLiqs = data.liquidations.filter(l => l.side === 'short').reduce((acc, l) => acc + l.volume, 0);
         
@@ -318,7 +293,6 @@ class MarketSentinel {
             signals.push(`🟢 Heavy short liquidations (${this.formatNumber(shortLiqs)} BTC)`);
         }
 
-        // Analyze open interest changes
         if (data.openInterest && data.openInterest.length > 1) {
             const oiChange = data.openInterest[data.openInterest.length - 1] - data.openInterest[0];
             if (Math.abs(oiChange) > data.openInterest[0] * 0.05) {
@@ -332,7 +306,6 @@ class MarketSentinel {
             }
         }
 
-        // Analyze price action
         if (data.btcPrice && data.btcPrice.usd_24h_change > 5) {
             strength += 1;
             signals.push(`🟢 Strong BTC momentum (+${data.btcPrice.usd_24h_change.toFixed(2)}% 24h)`);
@@ -341,7 +314,6 @@ class MarketSentinel {
             signals.push(`🔴 Weak BTC momentum (${data.btcPrice.usd_24h_change.toFixed(2)}% 24h)`);
         }
 
-        // Analyze ETH relative strength
         if (data.ethPrice && data.btcPrice) {
             const ethOutperformance = data.ethPrice.usd_24h_change - data.btcPrice.usd_24h_change;
             if (ethOutperformance > 3) {
@@ -353,7 +325,6 @@ class MarketSentinel {
             }
         }
 
-        // Analyze futures premium
         if (data.futures && data.btcPrice) {
             const premium = ((data.futures.markPrice / data.btcPrice.usd) - 1) * 100;
             if (premium > this.THRESHOLDS.PREMIUM_THRESHOLD) {
