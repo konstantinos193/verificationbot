@@ -329,7 +329,7 @@ client.once('ready', async () => {
 
         // Start market sentiment monitoring
         console.log('Starting market sentiment monitoring...');
-        await client.marketSentinel.startMonitoring();
+        await client.marketSentinel.startSentinel();
         console.log('Analyzing market sentiment...');
 
         // Start leaderboard system
