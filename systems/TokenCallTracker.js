@@ -300,12 +300,7 @@ class TokenCallTracker {
             }
 
             // Log the response for debugging
-            console.log('DexScreener response:', {
-                chain,
-                tokenAddress,
-                pairsFound: pairs.length,
-                firstPair: pairs[0]
-            });
+            console.log('DexScreener response:', response);
 
             return response.data;
         } catch (error) {
